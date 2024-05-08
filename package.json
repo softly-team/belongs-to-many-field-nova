@@ -15,13 +15,13 @@
         "cross-env": "^7.0.3",
         "form-backend-validation": "^2.3.3",
         "laravel-mix": "^6.0",
-        "resolve-url-loader": "^4.0.0",
         "lodash": "^4.17.21",
+        "resolve-url-loader": "^5.0.0",
         "sass": "^1.38.0",
         "sass-loader": "^12.1.0",
         "vue-loader": "^16.8.3"
     },
     "dependencies": {
-        "vue-multiselect": "^3.0.0-beta.1"
+        "vue-multiselect": "^3.0.0"
     }
 }

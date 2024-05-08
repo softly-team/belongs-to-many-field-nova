@@ -1,5 +1,5 @@
 <template>
-  <PanelItem :field="field" :index="index">
+  <!--PanelItem :field="field" :index="index">
     <template #value>
       <div v-if="field.showAsList">
         <div class="relative rounded-lg bg-white shadow border border-60">
@@ -31,16 +31,15 @@
       </span>
       </div>
     </template>
-  </PanelItem>
+  </PanelItem-->
 </template>
 
 <script>
-
   export default {
     props: ["index", "resource", "resourceName", "resourceId", "field"],
     methods: {
       get(object, path, defaultValue) {
-        return _.get(object, path, defaultValue);
+        //return _.get(object, path, defaultValue);
       }
     },
   };

@@ -27,6 +27,7 @@
           :options="options"
           v-bind="multiSelectProps"
           v-model="value"
+          class="w-full form-control form-input form-control-bordered px-0"
         >
           <template slot="noOptions">{{
             field.multiselectSlots.noOptions
@@ -190,7 +191,7 @@ export default {
       if (this.isDependant) {
         if (this.dependsOnValue) {
           this.loading = true;
-          Nova.request(
+          Nova.request().get(
             baseUrl +
               this.resourceName +
               "/" +
@@ -211,7 +212,7 @@ export default {
           this.loading = false;
         }
       } else {
-        Nova.request(
+        Nova.request().get(
           baseUrl +
             this.resourceName +
             "/" +
@@ -246,22 +247,64 @@ export default {
 
 <style src="vue-multiselect/dist/vue-multiselect.css"></style>
 <style type="text/css">
-.multiselect{
+.form-control.multiselect{
+  min-height: 32px;
+  padding: 0;
   justify-content: normal !important;
 }
-.multiselect__tags{
+
+.form-control .multiselect__spinner {
+  height: 32px;
+}
+
+.form-control .multiselect__select {
+  height: 32px;
+}
+
+.form-control .multiselect__tags{
   border:none !important;
 }
 
-.multiselect__placeholder {
-  font-size: 1rem;
-  color: var(--70) !important;
-  margin-left: 4px;
+.form-control .multiselect__placeholder {
+  color: rgba(var(--colors-gray-400));
+  margin: 0 5px;
+  padding:0;
 }
 
-.multiselect__tags {
-  border-width: 1px;
-  border-color: var(--60);
+.form-control .multiselect__element {
+ font-size: .875rem;
+}
+
+.form-control .multiselect__option--highlight,
+.form-control .multiselect__option--highlight::after {
+  background: rgba(var(--colors-primary-500));
+}
+
+.form-control .multiselect__option {
+  min-height: 32px;
+}
+
+.form-control .multiselect__content-wrapper {
+}
+
+.form-control .multiselect__input {
+ font-size: .875rem;
+}
+
+.form-control .multiselect__input::placeholder {
+  color: rgba(var(--colors-gray-400));
+}
+
+.form-control .multiselect__tags {
+  min-height: 32px;
+}
+
+.form-control .multiselect__tag {
+  background: rgba(var(--colors-primary-500));
+  margin-bottom: 0px;
+}
+.form-control .multiselect__tag-icon {
+  line-height: 18px;
 }
 
 .multiselect__select {
