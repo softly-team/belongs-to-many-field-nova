@@ -2,14 +2,16 @@
 
 namespace Benjacho\BelongsToManyField\Http\Controllers;
 
+use Laravel\Nova\Nova;
 use Laravel\Nova\Fields\Field;
 use Laravel\Nova\Http\Requests\NovaRequest;
 
 class ResourceController
 {
-    public function index(NovaRequest $request, $parent, $relationship, $optionsLabel, $dependsOnValue = null, $dependsOnKey = null)
+    public function index(NovaRequest $request, $resource, $relationship, $optionsLabel, $dependsOnValue = null, $dependsOnKey = null)
     {
         $resourceClass = $request->newResource();
+
         $field = $resourceClass
             ->availableFields($request)
             ->where('component', 'BelongsToManyField')
@@ -17,7 +19,7 @@ class ResourceController
             ->first();
         $query = $field->resourceClass::newModel();
 
-        $queryResult = $field->resourceClass::relatableQuery($request, $query);
+        $queryResult = $field->buildAttachableQuery($request, $query);
 
         if ($dependsOnValue) {
             $queryResult = $queryResult->where($dependsOnKey, $dependsOnValue);

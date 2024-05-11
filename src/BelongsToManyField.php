@@ -3,12 +3,21 @@
 namespace Benjacho\BelongsToManyField;
 
 use Benjacho\BelongsToManyField\Rules\ArrayRules;
+use Illuminate\Support\Str;
 use Laravel\Nova\Fields\Field;
+use Laravel\Nova\Fields\AssociatableRelation;
+use Laravel\Nova\Contracts\RelatableField;
 use Laravel\Nova\Fields\ResourceRelationshipGuesser;
+use Laravel\Nova\Contracts\QueryBuilder;
 use Laravel\Nova\Http\Requests\NovaRequest;
+use Illuminate\Database\Eloquent\Builder;
+use Laravel\Nova\TrashedStatus;
 
-class BelongsToManyField extends Field
+
+class BelongsToManyField extends Field implements RelatableField
 {
+    use AssociatableRelation;
+
     /**
      * The callback to be used for the field's options.
      *
@@ -25,6 +34,8 @@ class BelongsToManyField extends Field
     public $viewable = true;
     public $showAsList = false;
     public $pivotData = [];
+    private $customRelatableMethod = null;
+
     /**
      * The field's component.
      *
@@ -58,11 +69,13 @@ class BelongsToManyField extends Field
         $this->resourceClass = $resource;
         $this->resourceName = $resource::uriKey();
         $this->manyToManyRelationship = $this->attribute;
-
+              
         $this->fillUsing(function ($request, $model, $attribute, $requestAttribute) use ($resource) {
             if (is_subclass_of($model, 'Illuminate\Database\Eloquent\Model')) {
                 $model::saved(function ($model) use ($attribute, $request) {
                     $inp = json_decode($request->input($attribute), true);
+
+                    \Log::info('attribute:'.$attribute);
 
                     if ($inp !== null) {
                         $values = array_column($inp, 'id');
@@ -70,11 +83,13 @@ class BelongsToManyField extends Field
                         $values = [];
                     }
 
-                    if (!empty($this->pivot())) {
-                        $values = array_fill_keys($values, $this->pivot());
+                    $query = $model->$attribute();
+
+                    if (!empty($this->pivotData)) {
+                        $values = array_fill_keys($values, $this->pivotData);
                     }
 
-                    $model->$attribute()->sync(
+                    $query->sync(
                         $values
                     );
                 });
@@ -168,16 +183,58 @@ class BelongsToManyField extends Field
 
     public function resolve($resource, $attribute = null)
     {
-        if ($this->isAction) {
-            parent::resolve($resource, $attribute);
-        } else {
-            parent::resolve($resource, $attribute);
-            $value = json_decode($resource->{$this->attribute});
+        parent::resolve($resource, $attribute);
 
-            if ($value) {
-                $this->value = $value;
+        if (!$this->isAction) {
+            $this->value = $this->getValue($resource);
+        }
+    }
+
+    protected function getValue($resource)
+    {
+        $value = json_decode($resource->{$this->attribute});
+
+        // check if is translatable by checking first item
+        // and return value including translated field
+        if ($value && $this->value->count()) {
+            $optionsLabel = $this->meta['optionsLabel'];
+            $translatable = $this->value->first()->translatable;
+            if (is_array($translatable) && in_array($optionsLabel, $translatable)) {
+                $newValue = [];
+                foreach ($value as $item) {
+                    $item->{$optionsLabel} = $item->{$optionsLabel}->{app()->getLocale()};
+                    $newValue[] = $item;
+                }
+
+                return $newValue;
             }
         }
+
+        if ($value) {
+            return $value;
+        }
+
+        return $this->value;
+    }
+
+    /**
+     * Get the relationship name.
+     *
+     * @return string
+     */
+    public function relationshipName()
+    {
+        return $this->manyToManyRelationship;
+    }
+
+    /**
+     * Get the relationship type.
+     *
+     * @return string
+     */
+    public function relationshipType()
+    {
+        return 'belongsToMany';
     }
 
     public function jsonSerialize() : array
@@ -195,6 +252,7 @@ class BelongsToManyField extends Field
             'trackBy' => $this->trackBy,
             'panel' => $this->panel,
             'prefixComponent' => true,
+            'relatable' => true,
             'readonly' => $this->isReadonly(app(NovaRequest::class)),
             'required' => $this->isRequired(app(NovaRequest::class)),
             'resourceNameRelationship' => $this->resourceName,
@@ -255,6 +313,67 @@ class BelongsToManyField extends Field
             } else {
                 $this->withMeta(['options' => collect($this->optionsCallback)]);
             }
+        }
+    }
+
+    /**
+     * Build an attachable query for the field.
+     *
+     * @param  \Laravel\Nova\Http\Requests\NovaRequest  $request
+     * @param  bool  $withTrashed
+     * @return \Laravel\Nova\Contracts\QueryBuilder
+     */
+    public function buildAttachableQuery(NovaRequest $request, $withTrashed = false)
+    {
+        $model = forward_static_call([$resourceClass = $this->resourceClass, 'newModel']);
+
+        $query = app()->make(QueryBuilder::class, [$resourceClass]);
+
+        $request->first === 'true'
+                        ? $query->whereKey($model->newQueryWithoutScopes(), $request->current)
+                        : $query->search(
+                            $request, $model->newQuery(), $request->search,
+                            [], [], TrashedStatus::fromBoolean($withTrashed)
+                        );
+
+        return $query->tap(function ($query) use ($request, $model) {
+            if (is_callable($this->relatableQueryCallback)) {
+                call_user_func($this->relatableQueryCallback, $request, $query);
+
+                return;
+            }
+
+            forward_static_call($this->attachableQueryCallable($request, $model), $request, $query, $this);
+        });
+    } 
+    
+    /**
+     * Get the attachable query method name.
+     * 
+     * @param  \Laravel\Nova\Http\Requests\NovaRequest  $request
+     * @param  \Illuminate\Database\Eloquent\Model  $model
+     * @return array
+     */
+    protected function attachableQueryCallable(NovaRequest $request, $model)
+    {
+        return ($method = $this->attachableQueryMethod($request, $model))
+                    ? [$request->resource(), $method]
+                    : [$this->resourceClass, 'relatableQuery'];
+    }
+
+    /**
+     * Get the attachable query method name.
+     * 
+     * @param  \Laravel\Nova\Http\Requests\NovaRequest  $request
+     * @param  \Illuminate\Database\Eloquent\Model  $model
+     * @return string|null
+     */
+    protected function attachableQueryMethod(NovaRequest $request, $model)
+    {
+        $method = 'relatable'.Str::plural(class_basename($model));
+
+        if (method_exists($request->resource(), $method)) {
+            return $method;
         }
     }
 }

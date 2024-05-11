@@ -3,11 +3,11 @@
     <template #field>
       <div
         :style="{ height: field.height ? field.height : 'auto' }"
-        class="relative"
+        class="relative form-control form-input form-control-bordered p-0 w-full"
       >
         <div
           v-if="loading"
-          class="py-6 px-8 flex justify-center items-center absolute pin z-50 bg-white"
+          class="py-4 flex justify-center items-center absolute pin z-50 bg-white rounded"
         >
           <Loader class="text-60" />
         </div>
@@ -27,7 +27,6 @@
           :options="options"
           v-bind="multiSelectProps"
           v-model="value"
-          class="w-full form-control form-input form-control-bordered px-0"
         >
           <template slot="noOptions">{{
             field.multiselectSlots.noOptions
@@ -36,7 +35,7 @@
             field.multiselectSlots.noResult
           }}</template>
         </MultiSelect>
-      </div>
+        </div>
     </template>
   </DefaultField>
 </template>
@@ -44,6 +43,7 @@
 <script>
 import { FormField, HandlesValidationErrors } from "laravel-nova";
 import MultiSelect from "vue-multiselect";
+import isNil from 'lodash/isNil';
 
 export default {
   mixins: [FormField, HandlesValidationErrors],
@@ -90,6 +90,18 @@ export default {
         ...(this.field.multiselectOptions ? this.field.multiselectOptions : {}),
       };
     },
+
+    queryParams() {
+      return {
+        resourceId: this.resourceId,
+        editing: true,
+        editMode:
+          isNil(this.resourceId) || this.resourceId === ''
+            ? 'create'
+            : 'update',
+      };
+    },
+
   },
   watch: {
     selectAll(value) {
@@ -187,22 +199,13 @@ export default {
         return;
       }
 
-      let baseUrl = "/nova-vendor/belongs-to-many-field/";
+      let baseUrl = `/nova-vendor/belongs-to-many-field/${this.resourceName}/options/${this.field.attribute}/${this.optionsLabel}`;
       if (this.isDependant) {
         if (this.dependsOnValue) {
           this.loading = true;
           Nova.request().get(
-            baseUrl +
-              this.resourceName +
-              "/" +
-              "options/" +
-              this.field.attribute +
-              "/" +
-              this.optionsLabel +
-              "/" +
-              this.dependsOnValue +
-              "/" +
-              this.field.dependsOnKey
+            `${baseUrl}/${this.dependsOnValue}/${this.field.dependsOnKey}`,
+            { params: this.queryParams }
           ).then((data) => {
             this.options = data.data;
             this.loading = false;
@@ -213,13 +216,8 @@ export default {
         }
       } else {
         Nova.request().get(
-          baseUrl +
-            this.resourceName +
-            "/" +
-            "options/" +
-            this.field.attribute +
-            "/" +
-            this.optionsLabel
+          `${baseUrl}`,
+          { params: this.queryParams }
         ).then((data) => {
           this.options = data.data;
           this.loading = false;
@@ -248,7 +246,7 @@ export default {
 <style src="vue-multiselect/dist/vue-multiselect.css"></style>
 <style type="text/css">
 .form-control.multiselect{
-  min-height: 32px;
+  min-height: 24px;
   padding: 0;
   justify-content: normal !important;
 }
@@ -256,6 +254,13 @@ export default {
 .form-control .multiselect__spinner {
   height: 32px;
 }
+
+.form-control .multiselect__spinner::before,
+.form-control .multiselect__spinner::after {
+  border-color: rgba(var(--colors-primary-500)) transparent transparent;
+}
+
+
 
 .form-control .multiselect__select {
   height: 32px;
@@ -267,7 +272,7 @@ export default {
 
 .form-control .multiselect__placeholder {
   color: rgba(var(--colors-gray-400));
-  margin: 0 5px;
+  margin: 4px 4px;
   padding:0;
 }
 
@@ -282,13 +287,22 @@ export default {
 
 .form-control .multiselect__option {
   min-height: 32px;
+  font-size: .875rem;
 }
 
 .form-control .multiselect__content-wrapper {
+ margin-top: 1px;
 }
+
+.form-control .multiselect--above .multiselect__content-wrapper  {
+ bottom: 50%;
+}
+
 
 .form-control .multiselect__input {
  font-size: .875rem;
+ margin:0px;
+ padding: 4px;
 }
 
 .form-control .multiselect__input::placeholder {
@@ -296,16 +310,34 @@ export default {
 }
 
 .form-control .multiselect__tags {
-  min-height: 32px;
+  min-height: 30px;
+  padding: 4px 4px;
+  flex-wrap: wrap;
+  flex-flow: column wrap;
+}
+
+.form-comtrol .multiselect__tags-wrap {
+  padding: 0;
 }
 
 .form-control .multiselect__tag {
   background: rgba(var(--colors-primary-500));
   margin-bottom: 0px;
+  margin-right: 4px;
+  border-radius: 4px;
+  padding: 6px 24px 6px 6px;
 }
+
 .form-control .multiselect__tag-icon {
   line-height: 18px;
+  margin-left: 0px;
+  border-radius: 4px;
+  padding-top: 2px;
 }
+
+.form-control .multiselect__tag-icon::after {
+}
+
 
 .multiselect__select {
   display: flex;
