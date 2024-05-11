@@ -28,10 +28,10 @@
           v-bind="multiSelectProps"
           v-model="value"
         >
-          <template slot="noOptions">{{
+          <template v-slot:noOptions>{{
             field.multiselectSlots.noOptions
           }}</template>
-          <template slot="noResult">{{
+          <template v-slot:noResult>{{
             field.multiselectSlots.noResult
           }}</template>
         </MultiSelect>

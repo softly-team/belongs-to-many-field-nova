@@ -75,8 +75,6 @@ class BelongsToManyField extends Field implements RelatableField
                 $model::saved(function ($model) use ($attribute, $request) {
                     $inp = json_decode($request->input($attribute), true);
 
-                    \Log::info('attribute:'.$attribute);
-
                     if ($inp !== null) {
                         $values = array_column($inp, 'id');
                     } else {
