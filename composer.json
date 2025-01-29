@@ -14,7 +14,7 @@
     "extra": {
         "laravel": {
             "providers": [
-                "Benjacho\\BelongsToManyField\\BelongsToManyFieldServiceProvider"
+                "Benjacho\\BelongsToManyField\\FieldServiceProvider"
             ]
         }
     }
