@@ -8,7 +8,7 @@
     },
     "autoload": {
         "psr-4": {
-            "OperativeIT\\BelongsToManyField\\": "src/"
+            "Benjacho\\BelongsToManyField\\": "src/"
         }
     },
     "extra": {
